@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { execFileSync } from 'child_process';
+import os from 'os';
 
 class LintError extends Error {
   constructor(issues) {
@@ -26,7 +26,7 @@ function saveAux4(filePath, data, { noLint = false } = {}) {
   const json = JSON.stringify(data, null, 2) + "\n";
 
   if (noLint) {
-    fs.writeFileSync(filePath, json, "utf-8");
+    writeFileAtomic(filePath, json);
     return;
   }
 
@@ -42,10 +42,22 @@ function saveAux4(filePath, data, { noLint = false } = {}) {
       throw new LintError(errors);
     }
 
-    fs.writeFileSync(filePath, json, "utf-8");
+    writeFileAtomic(filePath, json);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+}
+
+// Writes the final, real file atomically: the content is written to a temp
+// file in the SAME directory as the target (so the rename is on the same
+// filesystem and therefore atomic), then swapped into place with a rename.
+// This means a crash or kill mid-write can never leave the real file
+// truncated or half-written — it's either the old content or the new one.
+function writeFileAtomic(filePath, content) {
+  const dir = path.dirname(path.resolve(filePath));
+  const tmpFile = path.join(dir, `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
+  fs.writeFileSync(tmpFile, content, "utf-8");
+  fs.renameSync(tmpFile, filePath);
 }
 
 function runLint(tmpDir) {
@@ -446,6 +458,47 @@ function withFile(params) {
   return params.file && params.file !== "" ? params.file : ".aux4";
 }
 
+// Fallback map from aux4/license 'name' to the proper SPDX identifier, used
+// only if 'aux4 aux4 license info --json true' doesn't return a 'spdxId'
+// field (it does today, but this keeps licenseSet from writing a lowercase,
+// non-SPDX value if that ever changes).
+const SPDX_ID_FALLBACK = {
+  "0bsd": "0BSD",
+  "apache-2.0": "Apache-2.0",
+  "mit": "MIT",
+  "mit-0": "MIT-0",
+  "isc": "ISC",
+  "bsd-2-clause": "BSD-2-Clause",
+  "bsd-3-clause": "BSD-3-Clause",
+  "gpl-2.0": "GPL-2.0-only",
+  "gpl-3.0": "GPL-3.0-only",
+  "lgpl-2.1": "LGPL-2.1-only",
+  "lgpl-3.0": "LGPL-3.0-only",
+  "agpl-3.0": "AGPL-3.0-only",
+  "mpl-2.0": "MPL-2.0",
+  "unlicense": "Unlicense"
+};
+
+function resolveSpdxId(name) {
+  const output = execFileSync("aux4", ["aux4", "license", "info", "--name", name, "--json", "true"], {
+    encoding: "utf-8"
+  });
+  const info = JSON.parse(output);
+  return info.spdxId || SPDX_ID_FALLBACK[name] || name;
+}
+
+// Restores the LICENSE file to its pre-licenseSet state: puts back the
+// original content if one existed, or removes the file if licenseSet
+// created it. Used to keep licenseSet atomic across the two files it
+// touches (LICENSE + .aux4) when the later lint-gated save fails.
+function restoreLicenseFile(licensePath, hadLicense, previousContent) {
+  if (hadLicense) {
+    fs.writeFileSync(licensePath, previousContent, "utf-8");
+  } else if (fs.existsSync(licensePath)) {
+    fs.unlinkSync(licensePath);
+  }
+}
+
 function save(filePath, aux4, params) {
   try {
     saveAux4(filePath, aux4, { noLint: noLintFlag(params) });
@@ -812,6 +865,88 @@ const actions = {
     if (aux4.type === "cloud") removeMetadataField(aux4, "type");
     save(filePath, aux4, params);
     console.log("Cloud configuration removed");
+  },
+
+  licenseSet(params) {
+    requireParam(params.name, "name");
+    requireParam(params.owner, "owner");
+    const filePath = withFile(params);
+    const aux4 = loadAux4(filePath);
+
+    const project = triString(aux4.name);
+    if (project === undefined) {
+      throw new Error(`'${filePath}' has no 'name' field; cannot determine --project for the license`);
+    }
+
+    const dir = path.dirname(path.resolve(filePath));
+    const year = triString(params.year) || String(new Date().getFullYear());
+    const licensePath = path.join(dir, "LICENSE");
+    const hadLicense = fs.existsSync(licensePath);
+    const previousContent = hadLicense ? fs.readFileSync(licensePath, "utf-8") : null;
+
+    execFileSync(
+      "aux4",
+      ["aux4", "license", "use", "--name", params.name, "--project", project, "--owner", params.owner, "--year", year],
+      { cwd: dir, encoding: "utf-8" }
+    );
+
+    let spdxId;
+    try {
+      spdxId = resolveSpdxId(params.name);
+    } catch (e) {
+      restoreLicenseFile(licensePath, hadLicense, previousContent);
+      throw new Error(`Failed to resolve the SPDX identifier for license '${params.name}': ${e.message}`);
+    }
+
+    try {
+      setMetadataField(aux4, "license", spdxId);
+      save(filePath, aux4, params);
+    } catch (e) {
+      restoreLicenseFile(licensePath, hadLicense, previousContent);
+      throw e;
+    }
+
+    console.log(`License '${spdxId}' set. LICENSE written to '${licensePath}'`);
+  },
+
+  licenseList(params) {
+    const args = ["aux4", "license", "list"];
+    const name = triString(params.name);
+    if (name !== undefined) args.push("--name", name);
+    const output = execFileSync("aux4", args, { encoding: "utf-8" });
+    process.stdout.write(output);
+  },
+
+  build(params) {
+    const filePath = withFile(params);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File '${filePath}' not found`);
+    }
+    const dir = path.dirname(path.resolve(filePath));
+    const out = triString(params.out) || ".";
+
+    const issues = runLint(dir);
+    const errors = issues.filter(issue => issue.severity === "error");
+    if (errors.length > 0) {
+      console.error(`aux4/lint rejected '${dir}':`);
+      console.error(formatIssues(errors));
+      throw new Error(`Lint validation failed with ${errors.length} error(s). Build aborted.`);
+    }
+
+    const outDir = path.resolve(dir, out);
+    if (outDir === dir) {
+      // Guard against the recursive-zip trap: if the output directory is the
+      // package directory itself, an old zip left over from a previous build
+      // would get swept into the new archive, growing it on every build.
+      for (const entry of fs.readdirSync(dir)) {
+        if (entry.endsWith(".zip")) {
+          fs.unlinkSync(path.join(dir, entry));
+        }
+      }
+    }
+
+    const output = execFileSync("aux4", ["aux4", "pkger", "build", ".", "--out", out], { cwd: dir, encoding: "utf-8" });
+    process.stdout.write(output);
   }
 };
 

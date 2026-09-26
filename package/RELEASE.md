@@ -1,5 +1,28 @@
 # Release notes
 
+## 0.2.0
+
+### Breaking: command root moved from `aux4 aux4 editor` to `aux4 editor`
+
+- The package's entry point moved from the `aux4` tools namespace to the top level: it's now
+  `aux4 editor ...` instead of `aux4 aux4 editor ...`. The internal profile that used to be named
+  `aux4:editor` (and its nested `aux4:editor:*` groups) is now `editor` (and `editor:*`). Anything
+  scripting the old `aux4 aux4 editor` invocation must be updated to `aux4 editor`.
+- Added `editor license set --name <license-id> --owner <owner> [--year <yyyy>] [--file .aux4]`,
+  which uses `aux4/license` (new dependency) to write a `LICENSE` file next to the target `.aux4`
+  file and sets that file's `license` field to the license's SPDX identifier (e.g. `apache-2.0` →
+  `Apache-2.0`). `--project` is taken from the `.aux4` file's `name` field, not a flag. On a lint
+  failure the `LICENSE` file is restored to its pre-command state (removed if this command created
+  it, restored to its previous content otherwise) and the `.aux4` file is left untouched.
+- Added `editor license list`, a passthrough to `aux4 aux4 license list`.
+- Added `editor build [--file .aux4] [--out <dir>]`, which lints the package directory and, if
+  lint passes, builds it into a distributable zip via `aux4 aux4 pkger build`. When the output
+  directory is the package directory itself (the default), stale `*.zip` files are removed first
+  to guard against the recursive-zip trap.
+- The final write of every mutating command is now atomic: the new content is written to a
+  temporary file in the same directory as the target and then renamed into place, so a crash or
+  kill mid-write can never leave the real `.aux4` file truncated or half-written.
+
 ## 0.1.2
 
 ### Required-flag validation, unified rename flag, and a bare `init`
@@ -14,7 +37,7 @@
 - `editor init` only writes `scope`/`name`/`description` when they are explicitly passed, and
   writes `version` only when passed or implied by `--scope`/`--name` (defaults to `0.1.0`, since
   `aux4/lint` requires a version once a package identity is present). A bare
-  `aux4 aux4 editor init` now produces `{"profiles":[{"name":"main","commands":[]}]}` and passes
+  `aux4 editor init` now produces `{"profiles":[{"name":"main","commands":[]}]}` and passes
   `aux4/lint` — previously it always wrote `"version": "0.1.0"`, which trips `aux4/lint`'s
   metadata rule that makes `scope`/`name` required once `version` is present, so a plain local
   (non-package) `.aux4` could not be created.
