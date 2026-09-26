@@ -1,0 +1,1066 @@
+{
+  "scope": "aux4",
+  "name": "editor",
+  "version": "0.1.0",
+  "description": "Create and modify .aux4 configuration files",
+  "license": "Apache-2.0",
+  "git": "https://github.com/aux4/editor",
+  "dependencies": [
+    "aux4/lint"
+  ],
+  "system": [
+    [
+      "test:node --version",
+      "brew:node",
+      "linux:nodejs"
+    ]
+  ],
+  "tags": [
+    "aux4",
+    "editor",
+    "generator",
+    "cli"
+  ],
+  "profiles": [
+    {
+      "name": "aux4",
+      "commands": [
+        {
+          "name": "editor",
+          "execute": [
+            "profile:aux4:editor"
+          ],
+          "help": {
+            "text": "Create and modify .aux4 configuration files"
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor",
+      "commands": [
+        {
+          "name": "init",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs init value(*)"
+          ],
+          "help": {
+            "text": "Create a new .aux4 file with an empty main profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file to create",
+                "default": ".aux4"
+              },
+              {
+                "name": "scope",
+                "text": "Package scope",
+                "default": ""
+              },
+              {
+                "name": "name",
+                "text": "Package name",
+                "default": ""
+              },
+              {
+                "name": "version",
+                "text": "Package version",
+                "default": "0.1.0"
+              },
+              {
+                "name": "description",
+                "text": "Package description",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "show",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs show value(*)"
+          ],
+          "help": {
+            "text": "Print the .aux4 file, a profile or a command as JSON",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile name to show",
+                "default": ""
+              },
+              {
+                "name": "command",
+                "text": "Command name to show (requires --profile)",
+                "default": ""
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "execute": [
+            "profile:aux4:editor:profile"
+          ],
+          "help": {
+            "text": "Add, remove or rename profiles"
+          }
+        },
+        {
+          "name": "command",
+          "execute": [
+            "profile:aux4:editor:command"
+          ],
+          "help": {
+            "text": "Add, remove or update commands"
+          }
+        },
+        {
+          "name": "variable",
+          "execute": [
+            "profile:aux4:editor:variable"
+          ],
+          "help": {
+            "text": "Add, remove or update command variables"
+          }
+        },
+        {
+          "name": "execute",
+          "execute": [
+            "profile:aux4:editor:execute"
+          ],
+          "help": {
+            "text": "Add, remove or update execute lines"
+          }
+        },
+        {
+          "name": "package",
+          "execute": [
+            "profile:aux4:editor:package"
+          ],
+          "help": {
+            "text": "Set or remove top-level package metadata fields"
+          }
+        },
+        {
+          "name": "tag",
+          "execute": [
+            "profile:aux4:editor:tag"
+          ],
+          "help": {
+            "text": "Add or remove package tags"
+          }
+        },
+        {
+          "name": "dependency",
+          "execute": [
+            "profile:aux4:editor:dependency"
+          ],
+          "help": {
+            "text": "Add or remove package dependencies"
+          }
+        },
+        {
+          "name": "system",
+          "execute": [
+            "profile:aux4:editor:system"
+          ],
+          "help": {
+            "text": "Add or remove system dependency groups"
+          }
+        },
+        {
+          "name": "cloud",
+          "execute": [
+            "profile:aux4:editor:cloud"
+          ],
+          "help": {
+            "text": "Set or remove the package's cloud configuration"
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:profile",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs profileAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a new profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Name of the profile to add"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs profileRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Name of the profile to remove"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rename",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs profileRename value(*)"
+          ],
+          "help": {
+            "text": "Rename a profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Current name of the profile"
+              },
+              {
+                "name": "newName",
+                "text": "New name for the profile"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:command",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs commandAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a new command to a profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile to add the command to",
+                "default": "main"
+              },
+              {
+                "name": "name",
+                "text": "Name of the command to add"
+              },
+              {
+                "name": "execute",
+                "text": "Execute line to add (repeatable)",
+                "multiple": true
+              },
+              {
+                "name": "helpText",
+                "text": "Help text for the command",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs commandRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a command from a profile",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile to remove the command from",
+                "default": "main"
+              },
+              {
+                "name": "name",
+                "text": "Name of the command to remove"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs commandSet value(*)"
+          ],
+          "help": {
+            "text": "Update a command's execute lines and/or help text",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "name",
+                "text": "Name of the command to update"
+              },
+              {
+                "name": "execute",
+                "text": "Replace the execute array with these lines (repeatable). Leave empty to keep the current execute lines",
+                "multiple": true
+              },
+              {
+                "name": "helpText",
+                "text": "Replace the help text. Leave empty to keep the current help text",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rename",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs commandRename value(*)"
+          ],
+          "help": {
+            "text": "Rename a command",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "name",
+                "text": "Current name of the command"
+              },
+              {
+                "name": "newName",
+                "text": "New name for the command"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:variable",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs variableAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a new variable to a command",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command to add the variable to"
+              },
+              {
+                "name": "name",
+                "text": "Name of the variable to add"
+              },
+              {
+                "name": "text",
+                "text": "Description shown in help and prompts",
+                "default": ""
+              },
+              {
+                "name": "default",
+                "text": "Default value for the variable",
+                "default": ""
+              },
+              {
+                "name": "arg",
+                "text": "Accept as a positional argument (true/false)",
+                "default": ""
+              },
+              {
+                "name": "multiple",
+                "text": "Accept multiple values (true/false)",
+                "default": ""
+              },
+              {
+                "name": "env",
+                "text": "Environment variable to read the value from",
+                "default": ""
+              },
+              {
+                "name": "options",
+                "text": "Option value for a select list (repeatable)",
+                "multiple": true
+              },
+              {
+                "name": "hide",
+                "text": "Hide the input, for passwords (true/false)",
+                "default": ""
+              },
+              {
+                "name": "encrypt",
+                "text": "Encrypt the value (true/false)",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs variableRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a variable from a command",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command to remove the variable from"
+              },
+              {
+                "name": "name",
+                "text": "Name of the variable to remove"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs variableSet value(*)"
+          ],
+          "help": {
+            "text": "Update properties of an existing variable. Only the properties explicitly passed are changed",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command the variable belongs to"
+              },
+              {
+                "name": "name",
+                "text": "Name of the variable to update"
+              },
+              {
+                "name": "text",
+                "text": "Description shown in help and prompts",
+                "default": ""
+              },
+              {
+                "name": "default",
+                "text": "Default value for the variable",
+                "default": ""
+              },
+              {
+                "name": "arg",
+                "text": "Accept as a positional argument (true/false)",
+                "default": ""
+              },
+              {
+                "name": "multiple",
+                "text": "Accept multiple values (true/false)",
+                "default": ""
+              },
+              {
+                "name": "env",
+                "text": "Environment variable to read the value from",
+                "default": ""
+              },
+              {
+                "name": "options",
+                "text": "Option value for a select list (repeatable). Replaces the whole list when provided",
+                "multiple": true
+              },
+              {
+                "name": "hide",
+                "text": "Hide the input, for passwords (true/false)",
+                "default": ""
+              },
+              {
+                "name": "encrypt",
+                "text": "Encrypt the value (true/false)",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rename",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs variableRename value(*)"
+          ],
+          "help": {
+            "text": "Rename a variable and rewrite every reference to it in the command's execute lines ($old, ${old}, and inside value()/values()/param()/params()/object() calls). Only whole-identifier matches are rewritten",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command the variable belongs to"
+              },
+              {
+                "name": "name",
+                "text": "Current name of the variable"
+              },
+              {
+                "name": "to",
+                "text": "New name for the variable"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:execute",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs executeAdd value(*)"
+          ],
+          "help": {
+            "text": "Add an execute line to a command",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command to add the execute line to"
+              },
+              {
+                "name": "line",
+                "text": "Execute line to add"
+              },
+              {
+                "name": "index",
+                "text": "Position to insert the line at (0-based). Appends to the end when omitted",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs executeRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove an execute line from a command",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command to remove the execute line from"
+              },
+              {
+                "name": "index",
+                "text": "Index of the execute line to remove (0-based)"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs executeSet value(*)"
+          ],
+          "help": {
+            "text": "Replace an execute line at a given index",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "profile",
+                "text": "Profile the command belongs to",
+                "default": "main"
+              },
+              {
+                "name": "command",
+                "text": "Name of the command whose execute line is being updated"
+              },
+              {
+                "name": "index",
+                "text": "Index of the execute line to replace (0-based)"
+              },
+              {
+                "name": "line",
+                "text": "New execute line"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:package",
+      "commands": [
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs packageSet value(*)"
+          ],
+          "help": {
+            "text": "Set a top-level package metadata field (scope, name, version, description, license, git, website, repository, private, cloud)",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "field",
+                "text": "Metadata field to set",
+                "options": [
+                  "scope",
+                  "name",
+                  "version",
+                  "description",
+                  "license",
+                  "git",
+                  "website",
+                  "repository",
+                  "private",
+                  "type",
+                  "cloud"
+                ]
+              },
+              {
+                "name": "value",
+                "text": "Value to set"
+              },
+              {
+                "name": "json",
+                "text": "Parse 'value' as JSON before setting it (needed for booleans/objects, e.g. --field private --value true --json true)",
+                "default": "false"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs packageRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a top-level package metadata field",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "field",
+                "text": "Metadata field to remove"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:tag",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs tagAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a tag to the package",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "tag",
+                "text": "Tag to add"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs tagRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a tag from the package",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "tag",
+                "text": "Tag to remove"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:dependency",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs dependencyAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a dependency to the package",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "dependency",
+                "text": "Dependency to add, e.g. 'aux4/config' or 'aux4/config@^1.0.0'"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs dependencyRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a dependency from the package (matches by 'scope/name', ignoring the version)",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "dependency",
+                "text": "Dependency to remove, e.g. 'aux4/config'"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:system",
+      "commands": [
+        {
+          "name": "add",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs systemAdd value(*)"
+          ],
+          "help": {
+            "text": "Add a system dependency alternatives group (e.g. ['test:node --version', 'brew:node', 'linux:nodejs'])",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "entries",
+                "text": "Entry to add to the group (repeatable, ordered — first should be a 'test:' check)",
+                "multiple": true
+              },
+              {
+                "name": "index",
+                "text": "Position to insert the group at (0-based). Appends to the end when omitted",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs systemRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove a system dependency alternatives group by index",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "index",
+                "text": "Index of the group to remove (0-based)"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "aux4:editor:cloud",
+      "commands": [
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs cloudSet value(*)"
+          ],
+          "help": {
+            "text": "Set the package's cloud configuration object",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "value",
+                "text": "Cloud configuration as a JSON object, e.g. '{\"type\":\"api\"}'"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "remove",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs cloudRemove value(*)"
+          ],
+          "help": {
+            "text": "Remove the package's cloud configuration",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file",
+                "default": ".aux4"
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing",
+                "default": "false"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

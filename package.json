@@ -1,0 +1,31 @@
+{
+  "name": "@aux4/editor",
+  "version": "0.1.0",
+  "description": "Create and modify .aux4 configuration files",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/aux4/editor.git"
+  },
+  "keywords": [
+    "aux4",
+    "editor",
+    "cli",
+    "generator"
+  ],
+  "author": "aux4 LLC",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/aux4/editor/issues"
+  },
+  "homepage": "https://github.com/aux4/editor#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^4.46.3"
+  }
+}
