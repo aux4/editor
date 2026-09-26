@@ -1,5 +1,10 @@
 # Release notes
 
+## Release flow
+
+Pushing to the `dev` branch publishes to the dev hub; pushing to `main` publishes to the prod hub
+(hub.aux4.io). Both are handled by `.github/workflows/publish.yml` via `aux4/action@v1`.
+
 ## 0.2.0
 
 ### Breaking: command root moved from `aux4 aux4 editor` to `aux4 editor`
