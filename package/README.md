@@ -20,21 +20,36 @@ aux4 aux4 editor variable add --command hello --name name --text "Name to greet"
 aux4 aux4 editor show
 ```
 
+`init` only writes the metadata fields you actually pass. A bare `aux4 aux4 editor init` with no
+flags creates the minimal `{"profiles":[{"name":"main","commands":[]}]}` — it never invents a
+`scope`, `name` or `version`, since those would make `scope`/`name` required by `aux4/lint` and
+break a plain local `.aux4` file that isn't meant to be a package. If you pass `--scope` and/or
+`--name` without `--version`, `version` defaults to `0.1.0`, since `aux4/lint` requires a version
+once a package identity is present.
+
+```bash
+aux4 aux4 editor init
+```
+
 ## The lint gate
 
 Every mutating subcommand:
 
-1. loads the target `.aux4` file (`--file .aux4` by default),
-2. applies the change in memory,
-3. writes the candidate result to a temporary directory as `.aux4`,
-4. runs `aux4 lint run` against that temporary copy,
-5. if any issue has severity `error`, prints the errors, exits non-zero, and **leaves the real
+1. validates that every required flag was actually provided — non-empty, and not the literal
+   string `undefined`/`null` (which is what a mistyped or missing flag with no default can arrive
+   as). If a required flag is missing, the command prints `--<flag> is required`, exits non-zero,
+   and **the file is never touched**,
+2. loads the target `.aux4` file (`--file .aux4` by default),
+3. applies the change in memory,
+4. writes the candidate result to a temporary directory as `.aux4`,
+5. runs `aux4 lint run` against that temporary copy,
+6. if any issue has severity `error`, prints the errors, exits non-zero, and **leaves the real
    file untouched**,
-6. otherwise, overwrites the real file with the new content, preserving key order and 2-space
+7. otherwise, overwrites the real file with the new content, preserving key order and 2-space
    JSON formatting.
 
-Pass `--noLint true` to skip validation (not recommended — nothing then stops you from writing a
-broken file).
+Pass `--noLint true` to skip lint validation (not recommended — nothing then stops you from
+writing a broken file). The required-flag check above always runs, even with `--noLint true`.
 
 ```bash
 aux4 aux4 editor package set --field version --value not-a-version
@@ -77,15 +92,17 @@ aux4 aux4 editor profile remove --profile deploy
 rewrites every `profile:<old>` reference anywhere in the file to point at the new name.
 
 ```bash
-aux4 aux4 editor profile rename --profile email --newName emails
+aux4 aux4 editor profile rename --profile email --to emails
 # email:list -> emails:list, and every "profile:email" / "profile:email:list" line is rewritten
 ```
 
 `command rename` renames a command within its profile:
 
 ```bash
-aux4 aux4 editor command rename --profile main --name hello --newName greet
+aux4 aux4 editor command rename --profile main --name hello --to greet
 ```
+
+`profile rename`, `command rename` and `variable rename` all take the new name as `--to`.
 
 ## Variables
 

@@ -5,6 +5,8 @@ also sets the required top-level `type: "cloud"` field alongside it (`aux4/lint`
 `cloud` object without `type: "cloud"`). See the aux4.cloud platform documentation for the full
 `cloud` schema (`deployment`, `stateful`, `machine`, `replaces`, etc.).
 
+Fails fast with a clear error (and leaves the file untouched) if a required flag is missing, empty, or the literal string `undefined`/`null`.
+
 #### Usage
 
 ```bash
@@ -12,7 +14,7 @@ aux4 aux4 editor cloud set [--file <path>] --value <json> [--noLint <true|false>
 ```
 
 --file      Path to the .aux4 file (default: `.aux4`)
---value     Cloud configuration as a JSON object
+--value     Cloud configuration as a JSON object (required)
 --noLint    Skip aux4/lint validation before writing (default: `false`)
 
 #### Example

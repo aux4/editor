@@ -32,6 +32,29 @@ aux4 aux4 editor execute add --file test-editor.aux4 --profile main --command he
 Execute line added to command 'hello' in profile 'main'
 ```
 
+### should fail without writing the file when --line is missing
+
+```execute
+aux4 aux4 editor execute add --file test-editor.aux4 --profile main --command hello; aux4 aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```error:partial
+--line is required
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "log:one",
+    "log:two"
+  ],
+  "help": {
+    "text": "Say hello"
+  }
+}
+```
+
 ### should insert an execute line at a given index
 
 ```execute

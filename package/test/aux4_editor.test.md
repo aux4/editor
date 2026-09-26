@@ -3,7 +3,7 @@
 ## init
 
 ```afterAll
-rm -f test-editor.aux4
+rm -f test-editor.aux4 test-editor-bare.aux4
 ```
 
 ### should create a new .aux4 file with an empty main profile
@@ -24,6 +24,23 @@ aux4 aux4 editor init --file test-editor.aux4 --scope aux4 --name greet
 
 ```error:partial
 File 'test-editor.aux4' already exists
+```
+
+### a bare init with no flags writes only profiles, no invented version, and passes lint
+
+```execute
+aux4 aux4 editor init --file test-editor-bare.aux4 >/dev/null && aux4 aux4 editor show --file test-editor-bare.aux4
+```
+
+```expect:json
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": []
+    }
+  ]
+}
 ```
 
 ## show

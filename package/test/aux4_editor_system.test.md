@@ -60,6 +60,47 @@ aux4 aux4 editor system add --file test-editor.aux4 --entries "test:jq --version
 }
 ```
 
+### should fail without writing the file when --entries is missing
+
+```execute
+aux4 aux4 editor system add --file test-editor.aux4; aux4 aux4 editor show --file test-editor.aux4
+```
+
+```error:partial
+--entries is required
+```
+
+```expect:json
+{
+  "scope": "aux4",
+  "name": "greet",
+  "version": "0.1.0",
+  "system": [
+    [
+      "test:node --version",
+      "brew:node",
+      "linux:nodejs"
+    ]
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "log:hi"
+          ],
+          "help": {
+            "text": "Say hello"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## remove
 
 ### should remove a system group by index

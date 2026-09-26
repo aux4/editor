@@ -64,8 +64,8 @@
               },
               {
                 "name": "version",
-                "text": "Package version",
-                "default": "0.1.0"
+                "text": "Package version. Only written when passed, or defaults to 0.1.0 if --scope/--name is passed",
+                "default": ""
               },
               {
                 "name": "description",
@@ -260,7 +260,7 @@
                 "text": "Current name of the profile"
               },
               {
-                "name": "newName",
+                "name": "to",
                 "text": "New name for the profile"
               },
               {
@@ -409,7 +409,7 @@
                 "text": "Current name of the command"
               },
               {
-                "name": "newName",
+                "name": "to",
                 "text": "New name for the command"
               },
               {

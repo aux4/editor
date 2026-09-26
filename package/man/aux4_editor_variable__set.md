@@ -3,6 +3,8 @@
 Updates one or more properties of an existing variable. Only the properties explicitly passed are
 changed — everything else is left as-is. `--options`, when passed, replaces the whole option list.
 
+Fails fast with a clear error (and leaves the file untouched) if a required flag is missing, empty, or the literal string `undefined`/`null`.
+
 #### Usage
 
 ```bash
@@ -11,8 +13,8 @@ aux4 aux4 editor variable set [--file <path>] [--profile <name>] --command <name
 
 --file       Path to the .aux4 file (default: `.aux4`)
 --profile    Profile the command belongs to (default: `main`)
---command    Name of the command the variable belongs to
---name       Name of the variable to update
+--command    Name of the command the variable belongs to (required)
+--name       Name of the variable to update (required)
 --text       Description shown in help and prompts
 --default    Default value for the variable
 --arg        Accept as a positional argument

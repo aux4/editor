@@ -39,6 +39,43 @@ aux4 aux4 editor dependency add --file test-editor.aux4 --dependency aux4/config
 Dependency 'aux4/config' already exists
 ```
 
+### should fail without writing the file when --dependency is missing
+
+```execute
+aux4 aux4 editor dependency add --file test-editor.aux4; aux4 aux4 editor show --file test-editor.aux4
+```
+
+```error:partial
+--dependency is required
+```
+
+```expect:json
+{
+  "scope": "aux4",
+  "name": "greet",
+  "version": "0.1.0",
+  "dependencies": [
+    "aux4/config"
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "log:hi"
+          ],
+          "help": {
+            "text": "Say hello"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## remove
 
 ### should remove a dependency, matching by scope/name

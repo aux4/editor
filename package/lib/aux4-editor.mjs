@@ -412,6 +412,36 @@ function noLintFlag(params) {
   return params.noLint === true || params.noLint === "true";
 }
 
+// Values that must never be accepted as a "real" required value. aux4 core
+// stringifies an unresolved variable with no default (e.g. a mistyped flag
+// name in a non-interactive shell) as the literal text "undefined", so a
+// naive `!== undefined` check lets garbage straight through to disk.
+const RESERVED_VALUES = new Set(["undefined", "null"]);
+
+function isBlank(value) {
+  return value === undefined || value === null || value === "" || RESERVED_VALUES.has(value);
+}
+
+// Validates a required flag before any mutation happens. Throws (and leaves
+// the file untouched) when the flag is missing, empty, or the literal string
+// "undefined"/"null" that aux4 core can produce for an unresolved variable.
+function requireParam(value, flagName) {
+  if (isBlank(value)) {
+    throw new Error(`--${flagName} is required`);
+  }
+  return value;
+}
+
+// Same as requireParam, but for a repeatable/array flag: requires at least
+// one non-blank entry.
+function requireEntries(value, flagName) {
+  const lines = toLines(value).filter(v => !isBlank(v));
+  if (lines.length === 0) {
+    throw new Error(`--${flagName} is required`);
+  }
+  return lines;
+}
+
 function withFile(params) {
   return params.file && params.file !== "" ? params.file : ".aux4";
 }
@@ -465,10 +495,21 @@ const actions = {
       throw new Error(`File '${filePath}' already exists`);
     }
 
+    const scope = triString(params.scope);
+    const name = triString(params.name);
+    const version = triString(params.version);
+
     const aux4 = {};
-    if (triString(params.scope) !== undefined) aux4.scope = params.scope;
-    if (triString(params.name) !== undefined) aux4.name = params.name;
-    aux4.version = triString(params.version) || "0.1.0";
+    if (scope !== undefined) aux4.scope = scope;
+    if (name !== undefined) aux4.name = name;
+    // aux4/lint requires 'version' once 'scope' or 'name' is present (a package),
+    // but a plain local .aux4 file (neither scope nor name) must not get one invented
+    // — that would in turn make 'scope'/'name' required, breaking a non-package file.
+    if (version !== undefined) {
+      aux4.version = version;
+    } else if (scope !== undefined || name !== undefined) {
+      aux4.version = "0.1.0";
+    }
     if (triString(params.description) !== undefined) aux4.description = params.description;
     aux4.profiles = [
       {
@@ -503,6 +544,7 @@ const actions = {
   },
 
   profileAdd(params) {
+    requireParam(params.profile, "profile");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addProfile(aux4, params.profile);
@@ -511,6 +553,7 @@ const actions = {
   },
 
   profileRemove(params) {
+    requireParam(params.profile, "profile");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeProfile(aux4, params.profile);
@@ -519,14 +562,17 @@ const actions = {
   },
 
   profileRename(params) {
+    requireParam(params.profile, "profile");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
-    renameProfile(aux4, params.profile, params.newName);
+    renameProfile(aux4, params.profile, params.to);
     save(filePath, aux4, params);
-    console.log(`Profile '${params.profile}' renamed to '${params.newName}'`);
+    console.log(`Profile '${params.profile}' renamed to '${params.to}'`);
   },
 
   commandAdd(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -540,6 +586,7 @@ const actions = {
   },
 
   commandRemove(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -550,6 +597,7 @@ const actions = {
   },
 
   commandSet(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -564,16 +612,20 @@ const actions = {
   },
 
   commandRename(params) {
+    requireParam(params.name, "name");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
     const profile = requireProfile(aux4, profileName);
-    renameCommand(profile, params.name, params.newName);
+    renameCommand(profile, params.name, params.to);
     save(filePath, aux4, params);
-    console.log(`Command '${params.name}' renamed to '${params.newName}' in profile '${profileName}'`);
+    console.log(`Command '${params.name}' renamed to '${params.to}' in profile '${profileName}'`);
   },
 
   variableAdd(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -586,6 +638,8 @@ const actions = {
   },
 
   variableRemove(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -597,6 +651,8 @@ const actions = {
   },
 
   variableSet(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -610,6 +666,9 @@ const actions = {
   },
 
   variableRename(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -621,6 +680,8 @@ const actions = {
   },
 
   executeAdd(params) {
+    requireParam(params.command, "command");
+    requireParam(params.line, "line");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -632,6 +693,8 @@ const actions = {
   },
 
   executeRemove(params) {
+    requireParam(params.command, "command");
+    requireParam(params.index, "index");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -643,6 +706,9 @@ const actions = {
   },
 
   executeSet(params) {
+    requireParam(params.command, "command");
+    requireParam(params.index, "index");
+    requireParam(params.line, "line");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -654,6 +720,8 @@ const actions = {
   },
 
   packageSet(params) {
+    requireParam(params.field, "field");
+    requireParam(params.value, "value");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const value = triString(params.json) === "true" || params.json === true
@@ -665,6 +733,7 @@ const actions = {
   },
 
   packageRemove(params) {
+    requireParam(params.field, "field");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeMetadataField(aux4, params.field);
@@ -673,6 +742,7 @@ const actions = {
   },
 
   tagAdd(params) {
+    requireParam(params.tag, "tag");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addTag(aux4, params.tag);
@@ -681,6 +751,7 @@ const actions = {
   },
 
   tagRemove(params) {
+    requireParam(params.tag, "tag");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeTag(aux4, params.tag);
@@ -689,6 +760,7 @@ const actions = {
   },
 
   dependencyAdd(params) {
+    requireParam(params.dependency, "dependency");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addDependency(aux4, params.dependency);
@@ -697,6 +769,7 @@ const actions = {
   },
 
   dependencyRemove(params) {
+    requireParam(params.dependency, "dependency");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeDependency(aux4, params.dependency);
@@ -705,14 +778,16 @@ const actions = {
   },
 
   systemAdd(params) {
+    const entries = requireEntries(params.entries, "entries");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
-    addSystemGroup(aux4, toLines(params.entries), triString(params.index));
+    addSystemGroup(aux4, entries, triString(params.index));
     save(filePath, aux4, params);
     console.log("System dependency group added");
   },
 
   systemRemove(params) {
+    requireParam(params.index, "index");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeSystemGroup(aux4, params.index);
@@ -721,6 +796,7 @@ const actions = {
   },
 
   cloudSet(params) {
+    requireParam(params.value, "value");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     setMetadataField(aux4, "type", "cloud");

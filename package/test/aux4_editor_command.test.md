@@ -46,6 +46,49 @@ aux4 aux4 editor command add --file test-editor.aux4 --profile main --name hello
 Command 'hello' already exists in profile 'main'
 ```
 
+### should fail without writing the file when --name is missing
+
+```execute
+aux4 aux4 editor command add --file test-editor.aux4 --profile main --execute 'log:hi'; aux4 aux4 editor show --file test-editor.aux4 --profile main
+```
+
+```error:partial
+--name is required
+```
+
+```expect:json
+{
+  "name": "main",
+  "commands": [
+    {
+      "name": "hello",
+      "execute": [
+        "log:Hello, ${name}!"
+      ],
+      "help": {
+        "text": "Say hello",
+        "variables": [
+          {
+            "name": "name",
+            "default": "World"
+          }
+        ]
+      }
+    },
+    {
+      "name": "bye",
+      "execute": [
+        "log:one",
+        "log:two"
+      ],
+      "help": {
+        "text": "Say bye"
+      }
+    }
+  ]
+}
+```
+
 ## set
 
 ### should replace execute lines and help text
@@ -71,7 +114,7 @@ aux4 aux4 editor command set --file test-editor.aux4 --profile main --name bye -
 ### should rename a command
 
 ```execute
-aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name bye --newName farewell2
+aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name bye --to farewell2
 ```
 
 ```expect
@@ -81,11 +124,57 @@ Command 'bye' renamed to 'farewell2' in profile 'main'
 ### should fail when the new name is already taken
 
 ```execute
-aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name bye --newName hello
+aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name bye --to farewell2 >/dev/null && aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name farewell2 --to hello
 ```
 
 ```error:partial
 Command 'hello' already exists in profile 'main'
+```
+
+### should fail without writing the file when --to is missing
+
+```execute
+aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name bye; aux4 aux4 editor show --file test-editor.aux4 --profile main --command bye
+```
+
+```error:partial
+--to is required
+```
+
+```expect:json
+{
+  "name": "bye",
+  "execute": [
+    "log:one",
+    "log:two"
+  ],
+  "help": {
+    "text": "Say bye"
+  }
+}
+```
+
+### should fail without writing the file when --name is the literal 'null'
+
+```execute
+aux4 aux4 editor command rename --file test-editor.aux4 --profile main --name null --to somethingElse; aux4 aux4 editor show --file test-editor.aux4 --profile main --command bye
+```
+
+```error:partial
+--name is required
+```
+
+```expect:json
+{
+  "name": "bye",
+  "execute": [
+    "log:one",
+    "log:two"
+  ],
+  "help": {
+    "text": "Say bye"
+  }
+}
 ```
 
 ## remove

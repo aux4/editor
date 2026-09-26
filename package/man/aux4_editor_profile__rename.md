@@ -7,23 +7,25 @@ Renames a profile and cascades the rename to every place that depends on the old
 - Every execute line anywhere in the file that reads `profile:<old>` (or `profile:<old>:<suffix>`
   for a nested profile) is rewritten to point at the new name.
 
-Fails if the profile does not exist, or if a profile with the new name already exists.
+`--profile` and `--to` are both required. Fails if either is missing or empty, if the profile
+does not exist, or if a profile with the new name already exists. Passing `undefined`/`null` as
+a value is treated the same as missing.
 
 #### Usage
 
 ```bash
-aux4 aux4 editor profile rename [--file <path>] --profile <name> --newName <name> [--noLint <true|false>]
+aux4 aux4 editor profile rename [--file <path>] --profile <name> --to <name> [--noLint <true|false>]
 ```
 
 --file      Path to the .aux4 file (default: `.aux4`)
---profile   Current name of the profile
---newName   New name for the profile
+--profile   Current name of the profile (required)
+--to        New name for the profile (required)
 --noLint    Skip aux4/lint validation before writing (default: `false`)
 
 #### Example
 
 ```bash
-aux4 aux4 editor profile rename --profile email --newName emails
+aux4 aux4 editor profile rename --profile email --to emails
 ```
 
 ```text

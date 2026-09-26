@@ -5,6 +5,8 @@ strings — conventionally a `test:` check followed by one or more install optio
 `brew:node`, `apt:nodejs`). `--entries` is repeatable and ordered. Appends to the end by default;
 pass `--index` to insert at a specific 0-based position.
 
+Fails fast with a clear error (and leaves the file untouched) if a required flag is missing, empty, or the literal string `undefined`/`null`.
+
 #### Usage
 
 ```bash
@@ -12,7 +14,7 @@ aux4 aux4 editor system add [--file <path>] --entries <value>... [--index <n>] [
 ```
 
 --file       Path to the .aux4 file (default: `.aux4`)
---entries    Entry to add to the group (repeatable, ordered)
+--entries    Entry to add to the group (repeatable, ordered, at least one required)
 --index      Position to insert the group at (0-based); appends when omitted
 --noLint     Skip aux4/lint validation before writing (default: `false`)
 

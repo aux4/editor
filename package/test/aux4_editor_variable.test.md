@@ -44,6 +44,52 @@ aux4 aux4 editor variable add --file test-editor.aux4 --profile main --command h
 Variable 'greeting' added to command 'hello' in profile 'main'
 ```
 
+### should fail without writing the file when --name is missing
+
+```execute
+aux4 aux4 editor variable add --file test-editor.aux4 --profile main --command hello --text "Greeting"; aux4 aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```error:partial
+--name is required
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "echo \"Hello, ${name}!\"",
+    "log:$nameX unaffected",
+    "log:${firstName} unaffected",
+    "aux4 something value(name) values(name, other) param(name)"
+  ],
+  "help": {
+    "text": "Say hello",
+    "variables": [
+      {
+        "name": "name",
+        "text": "Name to greet",
+        "default": "World"
+      },
+      {
+        "name": "other",
+        "text": "Other",
+        "default": ""
+      },
+      {
+        "name": "language",
+        "text": "Language",
+        "default": "en",
+        "options": [
+          "en",
+          "es"
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### should fail when the variable already exists
 
 ```execute

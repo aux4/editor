@@ -50,6 +50,42 @@ aux4 aux4 editor package set --file test-editor.aux4 --field bogus --value nope
 Unsupported metadata field 'bogus'
 ```
 
+### should fail without writing the file when --value is missing
+
+```execute
+aux4 aux4 editor package set --file test-editor.aux4 --field version; aux4 aux4 editor show --file test-editor.aux4
+```
+
+```error:partial
+--value is required
+```
+
+```expect:json
+{
+  "scope": "aux4",
+  "name": "greet",
+  "version": "0.1.0",
+  "description": "Say hello",
+  "private": true,
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "log:hi"
+          ],
+          "help": {
+            "text": "Say hello"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## lint rejection
 
 ### should reject an invalid version and leave the file untouched

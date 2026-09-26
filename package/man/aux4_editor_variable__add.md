@@ -5,6 +5,8 @@ already exists on the command. Only the properties explicitly passed are set —
 (`arg`, `multiple`, `hide`, `encrypt`) are set only when `--<flag> true`, and `--options` is
 repeatable.
 
+Fails fast with a clear error (and leaves the file untouched) if a required flag is missing, empty, or the literal string `undefined`/`null`.
+
 #### Usage
 
 ```bash
@@ -13,8 +15,8 @@ aux4 aux4 editor variable add [--file <path>] [--profile <name>] --command <name
 
 --file       Path to the .aux4 file (default: `.aux4`)
 --profile    Profile the command belongs to (default: `main`)
---command    Name of the command to add the variable to
---name       Name of the variable to add
+--command    Name of the command to add the variable to (required)
+--name       Name of the variable to add (required)
 --text       Description shown in help and prompts
 --default    Default value for the variable
 --arg        Accept as a positional argument
