@@ -7,6 +7,17 @@ Pushing to the `dev` branch publishes to the dev hub; pushing to `main` publishe
 
 ## Latest
 
+### Fixed: `variable add`/`variable set --default ''` silently dropped an explicit empty default
+
+- `--default ''` (or `--default=`) on `editor variable add`/`editor variable set` now persists a
+  literal `"default": ""` on the variable, instead of writing no `default` property at all. aux4
+  core resolves an omitted `--default` flag to the variable's own default before this package ever
+  sees it, so a plain empty-string default on the `default` flag itself made "not passed" and
+  "passed as `''`" indistinguishable — that variable's default is now an internal sentinel that a
+  user can never type through the CLI, so the two cases are told apart correctly. Omitting
+  `--default` still behaves exactly as before: `add` leaves the new variable without a `default`
+  property, and `set` leaves an existing default untouched.
+
 ### `init` scaffolds a README.md for a package; `build` fails fast and cleanly when one is missing
 
 - `editor init --scope <scope>` and/or `--name <name>` now scaffolds a minimal `README.md` next to

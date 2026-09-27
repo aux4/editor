@@ -545,7 +545,7 @@
               {
                 "name": "default",
                 "text": "Default value for the variable",
-                "default": ""
+                "default": "\u0000__aux4_editor_default_unset__\u0000"
               },
               {
                 "name": "arg",
@@ -653,7 +653,7 @@
               {
                 "name": "default",
                 "text": "Default value for the variable",
-                "default": ""
+                "default": "\u0000__aux4_editor_default_unset__\u0000"
               },
               {
                 "name": "arg",

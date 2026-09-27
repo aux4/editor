@@ -18,7 +18,8 @@ aux4 editor variable add [--file <path>] [--profile <name>] --command <name> --n
 --command    Name of the command to add the variable to (required)
 --name       Name of the variable to add (required)
 --text       Description shown in help and prompts
---default    Default value for the variable
+--default    Default value for the variable. Pass `--default ''` to persist an explicit empty
+             default; omitting the flag leaves the variable without a `default` property at all
 --arg        Accept as a positional argument
 --multiple   Accept multiple values
 --env        Environment variable to read the value from

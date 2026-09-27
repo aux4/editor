@@ -16,7 +16,8 @@ aux4 editor variable set [--file <path>] [--profile <name>] --command <name> --n
 --command    Name of the command the variable belongs to (required)
 --name       Name of the variable to update (required)
 --text       Description shown in help and prompts
---default    Default value for the variable
+--default    Default value for the variable. Pass `--default ''` to persist an explicit empty
+             default; omitting the flag leaves the existing default (if any) unchanged
 --arg        Accept as a positional argument
 --multiple   Accept multiple values
 --env        Environment variable to read the value from

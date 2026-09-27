@@ -100,6 +100,98 @@ aux4 editor variable add --file test-editor.aux4 --profile main --command hello 
 Variable 'name' already exists in command 'hello'
 ```
 
+### should persist an explicit empty string default
+
+```execute
+aux4 editor variable add --file test-editor.aux4 --profile main --command hello --name greeting --default '' >/dev/null && aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "echo \"Hello, ${name}!\"",
+    "log:$nameX unaffected",
+    "log:${firstName} unaffected",
+    "aux4 something value(name) values(name, other) param(name)"
+  ],
+  "help": {
+    "text": "Say hello",
+    "variables": [
+      {
+        "name": "name",
+        "text": "Name to greet",
+        "default": "World"
+      },
+      {
+        "name": "other",
+        "text": "Other",
+        "default": ""
+      },
+      {
+        "name": "language",
+        "text": "Language",
+        "default": "en",
+        "options": [
+          "en",
+          "es"
+        ]
+      },
+      {
+        "name": "greeting",
+        "default": ""
+      }
+    ]
+  }
+}
+```
+
+### should not add a default property when --default is omitted
+
+```execute
+aux4 editor variable add --file test-editor.aux4 --profile main --command hello --name greeting --text "Greeting" >/dev/null && aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "echo \"Hello, ${name}!\"",
+    "log:$nameX unaffected",
+    "log:${firstName} unaffected",
+    "aux4 something value(name) values(name, other) param(name)"
+  ],
+  "help": {
+    "text": "Say hello",
+    "variables": [
+      {
+        "name": "name",
+        "text": "Name to greet",
+        "default": "World"
+      },
+      {
+        "name": "other",
+        "text": "Other",
+        "default": ""
+      },
+      {
+        "name": "language",
+        "text": "Language",
+        "default": "en",
+        "options": [
+          "en",
+          "es"
+        ]
+      },
+      {
+        "name": "greeting",
+        "text": "Greeting"
+      }
+    ]
+  }
+}
+```
+
 ## set
 
 ### should update only the properties explicitly passed and leave the rest untouched
@@ -134,6 +226,90 @@ aux4 editor variable set --file test-editor.aux4 --profile main --command hello 
         "name": "language",
         "text": "Language",
         "default": "es",
+        "options": [
+          "en",
+          "es"
+        ]
+      }
+    ]
+  }
+}
+```
+
+### should persist an explicit empty string default on an existing variable
+
+```execute
+aux4 editor variable set --file test-editor.aux4 --profile main --command hello --name name --default '' >/dev/null && aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "echo \"Hello, ${name}!\"",
+    "log:$nameX unaffected",
+    "log:${firstName} unaffected",
+    "aux4 something value(name) values(name, other) param(name)"
+  ],
+  "help": {
+    "text": "Say hello",
+    "variables": [
+      {
+        "name": "name",
+        "text": "Name to greet",
+        "default": ""
+      },
+      {
+        "name": "other",
+        "text": "Other",
+        "default": ""
+      },
+      {
+        "name": "language",
+        "text": "Language",
+        "default": "en",
+        "options": [
+          "en",
+          "es"
+        ]
+      }
+    ]
+  }
+}
+```
+
+### should leave an existing default unchanged when --default is omitted
+
+```execute
+aux4 editor variable set --file test-editor.aux4 --profile main --command hello --name name --text "Updated text" >/dev/null && aux4 editor show --file test-editor.aux4 --profile main --command hello
+```
+
+```expect:json
+{
+  "name": "hello",
+  "execute": [
+    "echo \"Hello, ${name}!\"",
+    "log:$nameX unaffected",
+    "log:${firstName} unaffected",
+    "aux4 something value(name) values(name, other) param(name)"
+  ],
+  "help": {
+    "text": "Say hello",
+    "variables": [
+      {
+        "name": "name",
+        "text": "Updated text",
+        "default": "World"
+      },
+      {
+        "name": "other",
+        "text": "Other",
+        "default": ""
+      },
+      {
+        "name": "language",
+        "text": "Language",
+        "default": "en",
         "options": [
           "en",
           "es"
