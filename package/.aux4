@@ -1,12 +1,13 @@
 {
   "scope": "aux4",
   "name": "editor",
-  "version": "0.1.1",
+  "version": "0.2.2",
   "description": "Create and modify .aux4 configuration files",
   "license": "Apache-2.0",
   "git": "https://github.com/aux4/editor",
   "dependencies": [
-    "aux4/lint"
+    "aux4/lint",
+    "aux4/license"
   ],
   "system": [
     [
@@ -23,12 +24,12 @@
   ],
   "profiles": [
     {
-      "name": "aux4",
+      "name": "main",
       "commands": [
         {
           "name": "editor",
           "execute": [
-            "profile:aux4:editor"
+            "profile:editor"
           ],
           "help": {
             "text": "Create and modify .aux4 configuration files"
@@ -37,7 +38,7 @@
       ]
     },
     {
-      "name": "aux4:editor",
+      "name": "editor",
       "commands": [
         {
           "name": "init",
@@ -64,8 +65,8 @@
               },
               {
                 "name": "version",
-                "text": "Package version",
-                "default": "0.1.0"
+                "text": "Package version. Only written when passed, or defaults to 0.1.0 if --scope/--name is passed",
+                "default": ""
               },
               {
                 "name": "description",
@@ -109,7 +110,7 @@
         {
           "name": "profile",
           "execute": [
-            "profile:aux4:editor:profile"
+            "profile:editor:profile"
           ],
           "help": {
             "text": "Add, remove or rename profiles"
@@ -118,7 +119,7 @@
         {
           "name": "command",
           "execute": [
-            "profile:aux4:editor:command"
+            "profile:editor:command"
           ],
           "help": {
             "text": "Add, remove or update commands"
@@ -127,7 +128,7 @@
         {
           "name": "variable",
           "execute": [
-            "profile:aux4:editor:variable"
+            "profile:editor:variable"
           ],
           "help": {
             "text": "Add, remove or update command variables"
@@ -136,7 +137,7 @@
         {
           "name": "execute",
           "execute": [
-            "profile:aux4:editor:execute"
+            "profile:editor:execute"
           ],
           "help": {
             "text": "Add, remove or update execute lines"
@@ -145,7 +146,7 @@
         {
           "name": "package",
           "execute": [
-            "profile:aux4:editor:package"
+            "profile:editor:package"
           ],
           "help": {
             "text": "Set or remove top-level package metadata fields"
@@ -154,7 +155,7 @@
         {
           "name": "tag",
           "execute": [
-            "profile:aux4:editor:tag"
+            "profile:editor:tag"
           ],
           "help": {
             "text": "Add or remove package tags"
@@ -163,7 +164,7 @@
         {
           "name": "dependency",
           "execute": [
-            "profile:aux4:editor:dependency"
+            "profile:editor:dependency"
           ],
           "help": {
             "text": "Add or remove package dependencies"
@@ -172,7 +173,7 @@
         {
           "name": "system",
           "execute": [
-            "profile:aux4:editor:system"
+            "profile:editor:system"
           ],
           "help": {
             "text": "Add or remove system dependency groups"
@@ -181,16 +182,101 @@
         {
           "name": "cloud",
           "execute": [
-            "profile:aux4:editor:cloud"
+            "profile:editor:cloud"
           ],
           "help": {
             "text": "Set or remove the package's cloud configuration"
+          }
+        },
+        {
+          "name": "license",
+          "execute": [
+            "profile:editor:license"
+          ],
+          "help": {
+            "text": "Set the package license (writes LICENSE and the .aux4 'license' field) or list available licenses"
+          }
+        },
+        {
+          "name": "build",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs build value(*)"
+          ],
+          "help": {
+            "text": "Lint the package and build it into a distributable zip",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file. The package directory is derived from it",
+                "default": ".aux4"
+              },
+              {
+                "name": "out",
+                "text": "Output directory for the built zip",
+                "default": "."
+              }
+            ]
           }
         }
       ]
     },
     {
-      "name": "aux4:editor:profile",
+      "name": "editor:license",
+      "commands": [
+        {
+          "name": "set",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs licenseSet value(*)"
+          ],
+          "help": {
+            "text": "Apply a license to the package: writes LICENSE next to the .aux4 file (via aux4/license) and sets the .aux4 'license' field to the license's SPDX identifier",
+            "variables": [
+              {
+                "name": "file",
+                "text": "Path to the .aux4 file. LICENSE is written next to it",
+                "default": ".aux4"
+              },
+              {
+                "name": "name",
+                "text": "License identifier, e.g. 'apache-2.0' or 'mit' (see 'editor license list')"
+              },
+              {
+                "name": "owner",
+                "text": "Copyright owner"
+              },
+              {
+                "name": "year",
+                "text": "License year",
+                "default": ""
+              },
+              {
+                "name": "noLint",
+                "text": "Skip aux4/lint validation before writing the .aux4 change",
+                "default": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "list",
+          "execute": [
+            "node ${packageDir}/lib/aux4-editor.mjs licenseList value(*)"
+          ],
+          "help": {
+            "text": "List the licenses available from aux4/license",
+            "variables": [
+              {
+                "name": "name",
+                "text": "Show details for a single license instead of the full list",
+                "default": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "editor:profile",
       "commands": [
         {
           "name": "add",
@@ -260,7 +346,7 @@
                 "text": "Current name of the profile"
               },
               {
-                "name": "newName",
+                "name": "to",
                 "text": "New name for the profile"
               },
               {
@@ -274,7 +360,7 @@
       ]
     },
     {
-      "name": "aux4:editor:command",
+      "name": "editor:command",
       "commands": [
         {
           "name": "add",
@@ -409,7 +495,7 @@
                 "text": "Current name of the command"
               },
               {
-                "name": "newName",
+                "name": "to",
                 "text": "New name for the command"
               },
               {
@@ -423,7 +509,7 @@
       ]
     },
     {
-      "name": "aux4:editor:variable",
+      "name": "editor:variable",
       "commands": [
         {
           "name": "add",
@@ -459,7 +545,7 @@
               {
                 "name": "default",
                 "text": "Default value for the variable",
-                "default": ""
+                "default": "\u0000__aux4_editor_default_unset__\u0000"
               },
               {
                 "name": "arg",
@@ -567,7 +653,7 @@
               {
                 "name": "default",
                 "text": "Default value for the variable",
-                "default": ""
+                "default": "\u0000__aux4_editor_default_unset__\u0000"
               },
               {
                 "name": "arg",
@@ -648,7 +734,7 @@
       ]
     },
     {
-      "name": "aux4:editor:execute",
+      "name": "editor:execute",
       "commands": [
         {
           "name": "add",
@@ -764,7 +850,7 @@
       ]
     },
     {
-      "name": "aux4:editor:package",
+      "name": "editor:package",
       "commands": [
         {
           "name": "set",
@@ -841,7 +927,7 @@
       ]
     },
     {
-      "name": "aux4:editor:tag",
+      "name": "editor:tag",
       "commands": [
         {
           "name": "add",
@@ -896,7 +982,7 @@
       ]
     },
     {
-      "name": "aux4:editor:dependency",
+      "name": "editor:dependency",
       "commands": [
         {
           "name": "add",
@@ -951,7 +1037,7 @@
       ]
     },
     {
-      "name": "aux4:editor:system",
+      "name": "editor:system",
       "commands": [
         {
           "name": "add",
@@ -1012,7 +1098,7 @@
       ]
     },
     {
-      "name": "aux4:editor:cloud",
+      "name": "editor:cloud",
       "commands": [
         {
           "name": "set",

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { execFileSync } from 'child_process';
+import os from 'os';
 
 class LintError extends Error {
   constructor(issues) {
@@ -26,7 +26,7 @@ function saveAux4(filePath, data, { noLint = false } = {}) {
   const json = JSON.stringify(data, null, 2) + "\n";
 
   if (noLint) {
-    fs.writeFileSync(filePath, json, "utf-8");
+    writeFileAtomic(filePath, json);
     return;
   }
 
@@ -42,10 +42,22 @@ function saveAux4(filePath, data, { noLint = false } = {}) {
       throw new LintError(errors);
     }
 
-    fs.writeFileSync(filePath, json, "utf-8");
+    writeFileAtomic(filePath, json);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+}
+
+// Writes the final, real file atomically: the content is written to a temp
+// file in the SAME directory as the target (so the rename is on the same
+// filesystem and therefore atomic), then swapped into place with a rename.
+// This means a crash or kill mid-write can never leave the real file
+// truncated or half-written — it's either the old content or the new one.
+function writeFileAtomic(filePath, content) {
+  const dir = path.dirname(path.resolve(filePath));
+  const tmpFile = path.join(dir, `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
+  fs.writeFileSync(tmpFile, content, "utf-8");
+  fs.renameSync(tmpFile, filePath);
 }
 
 function runLint(tmpDir) {
@@ -55,7 +67,7 @@ function runLint(tmpDir) {
     output = execFileSync(
       "aux4",
       ["lint", "run", "--dir", tmpDir, "--format", "json", "--strict", "false", "--resolve", "false"],
-      { encoding: "utf-8" }
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
   } catch (err) {
     output = err.stdout;
@@ -395,6 +407,22 @@ function triString(value) {
   return value;
 }
 
+// aux4 core resolves an omitted flag to the variable's OWN default before this
+// code ever runs (value(*) always sends a fully-resolved object). If that
+// variable's default were the plain empty string "", "not passed" and
+// "passed as --default ''" would arrive as the exact same value ("") and be
+// indistinguishable here — which is exactly why an explicit empty default
+// used to get silently dropped. To tell them apart, the 'default' variable's
+// OWN default in .aux4 is this sentinel (never a value a user could type
+// through the CLI), so "not passed" resolves to the sentinel and an explicit
+// empty string resolves to "".
+const DEFAULT_UNSET = "\u0000__aux4_editor_default_unset__\u0000";
+
+function triDefault(value) {
+  if (value === undefined || value === null || value === DEFAULT_UNSET) return undefined;
+  return value;
+}
+
 function triArray(value) {
   if (value === undefined || value === null) return undefined;
   const arr = Array.isArray(value) ? value : [value];
@@ -412,8 +440,80 @@ function noLintFlag(params) {
   return params.noLint === true || params.noLint === "true";
 }
 
+// Values that must never be accepted as a "real" required value. aux4 core
+// stringifies an unresolved variable with no default (e.g. a mistyped flag
+// name in a non-interactive shell) as the literal text "undefined", so a
+// naive `!== undefined` check lets garbage straight through to disk.
+const RESERVED_VALUES = new Set(["undefined", "null"]);
+
+function isBlank(value) {
+  return value === undefined || value === null || value === "" || RESERVED_VALUES.has(value);
+}
+
+// Validates a required flag before any mutation happens. Throws (and leaves
+// the file untouched) when the flag is missing, empty, or the literal string
+// "undefined"/"null" that aux4 core can produce for an unresolved variable.
+function requireParam(value, flagName) {
+  if (isBlank(value)) {
+    throw new Error(`--${flagName} is required`);
+  }
+  return value;
+}
+
+// Same as requireParam, but for a repeatable/array flag: requires at least
+// one non-blank entry.
+function requireEntries(value, flagName) {
+  const lines = toLines(value).filter(v => !isBlank(v));
+  if (lines.length === 0) {
+    throw new Error(`--${flagName} is required`);
+  }
+  return lines;
+}
+
 function withFile(params) {
   return params.file && params.file !== "" ? params.file : ".aux4";
+}
+
+// Fallback map from aux4/license 'name' to the proper SPDX identifier, used
+// only if 'aux4 aux4 license info --json true' doesn't return a 'spdxId'
+// field (it does today, but this keeps licenseSet from writing a lowercase,
+// non-SPDX value if that ever changes).
+const SPDX_ID_FALLBACK = {
+  "0bsd": "0BSD",
+  "apache-2.0": "Apache-2.0",
+  "mit": "MIT",
+  "mit-0": "MIT-0",
+  "isc": "ISC",
+  "bsd-2-clause": "BSD-2-Clause",
+  "bsd-3-clause": "BSD-3-Clause",
+  "gpl-2.0": "GPL-2.0-only",
+  "gpl-3.0": "GPL-3.0-only",
+  "lgpl-2.1": "LGPL-2.1-only",
+  "lgpl-3.0": "LGPL-3.0-only",
+  "agpl-3.0": "AGPL-3.0-only",
+  "mpl-2.0": "MPL-2.0",
+  "unlicense": "Unlicense"
+};
+
+function resolveSpdxId(name) {
+  const output = execFileSync("aux4", ["aux4", "license", "info", "--name", name, "--json", "true"], {
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+  const info = JSON.parse(output);
+  return info.spdxId || SPDX_ID_FALLBACK[name] || name;
+}
+
+// Restores the LICENSE file to its pre-licenseSet state: puts back the
+// original content if one existed, or removes the file if licenseSet
+// created it. Used to keep licenseSet atomic across the two files it
+// touches (LICENSE + .aux4) when the later lint-gated save fails.
+function restoreLicenseFile(licensePath, hadLicense, previousContent) {
+  if (hadLicense) {
+    fs.writeFileSync(licensePath, previousContent, "utf-8");
+  } else if (fs.existsSync(licensePath)) {
+    fs.unlinkSync(licensePath);
+  }
 }
 
 function save(filePath, aux4, params) {
@@ -434,7 +534,7 @@ function buildVariableProps(params) {
   const text = triString(params.text);
   if (text !== undefined) props.text = text;
 
-  const def = triString(params.default);
+  const def = triDefault(params.default);
   if (def !== undefined) props.default = def;
 
   const arg = triBool(params.arg);
@@ -465,10 +565,21 @@ const actions = {
       throw new Error(`File '${filePath}' already exists`);
     }
 
+    const scope = triString(params.scope);
+    const name = triString(params.name);
+    const version = triString(params.version);
+
     const aux4 = {};
-    if (triString(params.scope) !== undefined) aux4.scope = params.scope;
-    if (triString(params.name) !== undefined) aux4.name = params.name;
-    aux4.version = triString(params.version) || "0.1.0";
+    if (scope !== undefined) aux4.scope = scope;
+    if (name !== undefined) aux4.name = name;
+    // aux4/lint requires 'version' once 'scope' or 'name' is present (a package),
+    // but a plain local .aux4 file (neither scope nor name) must not get one invented
+    // — that would in turn make 'scope'/'name' required, breaking a non-package file.
+    if (version !== undefined) {
+      aux4.version = version;
+    } else if (scope !== undefined || name !== undefined) {
+      aux4.version = "0.1.0";
+    }
     if (triString(params.description) !== undefined) aux4.description = params.description;
     aux4.profiles = [
       {
@@ -478,7 +589,28 @@ const actions = {
     ];
 
     save(filePath, aux4, params);
+
+    // A package (identified by 'scope' and/or 'name') must ship a README.md
+    // for 'aux4 aux4 pkger build' to succeed. Scaffold a minimal one next to
+    // the .aux4 file so 'init' -> 'build' works out of the box, but never
+    // touch an existing README.md.
+    let readmeCreated;
+    if (scope !== undefined || name !== undefined) {
+      const dir = path.dirname(path.resolve(filePath));
+      const readmePath = path.join(dir, "README.md");
+      if (!fs.existsSync(readmePath)) {
+        const title = scope !== undefined && name !== undefined ? `${scope}/${name}` : name || scope;
+        const description = triString(params.description);
+        const content = description !== undefined ? `# ${title}\n\n${description}\n` : `# ${title}\n`;
+        fs.writeFileSync(readmePath, content, "utf-8");
+        readmeCreated = readmePath;
+      }
+    }
+
     console.log(`Created '${filePath}'`);
+    if (readmeCreated !== undefined) {
+      console.log(`Created '${readmeCreated}'`);
+    }
   },
 
   show(params) {
@@ -503,6 +635,7 @@ const actions = {
   },
 
   profileAdd(params) {
+    requireParam(params.profile, "profile");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addProfile(aux4, params.profile);
@@ -511,6 +644,7 @@ const actions = {
   },
 
   profileRemove(params) {
+    requireParam(params.profile, "profile");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeProfile(aux4, params.profile);
@@ -519,14 +653,17 @@ const actions = {
   },
 
   profileRename(params) {
+    requireParam(params.profile, "profile");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
-    renameProfile(aux4, params.profile, params.newName);
+    renameProfile(aux4, params.profile, params.to);
     save(filePath, aux4, params);
-    console.log(`Profile '${params.profile}' renamed to '${params.newName}'`);
+    console.log(`Profile '${params.profile}' renamed to '${params.to}'`);
   },
 
   commandAdd(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -540,6 +677,7 @@ const actions = {
   },
 
   commandRemove(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -550,6 +688,7 @@ const actions = {
   },
 
   commandSet(params) {
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -564,16 +703,20 @@ const actions = {
   },
 
   commandRename(params) {
+    requireParam(params.name, "name");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
     const profile = requireProfile(aux4, profileName);
-    renameCommand(profile, params.name, params.newName);
+    renameCommand(profile, params.name, params.to);
     save(filePath, aux4, params);
-    console.log(`Command '${params.name}' renamed to '${params.newName}' in profile '${profileName}'`);
+    console.log(`Command '${params.name}' renamed to '${params.to}' in profile '${profileName}'`);
   },
 
   variableAdd(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -586,6 +729,8 @@ const actions = {
   },
 
   variableRemove(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -597,6 +742,8 @@ const actions = {
   },
 
   variableSet(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -610,6 +757,9 @@ const actions = {
   },
 
   variableRename(params) {
+    requireParam(params.command, "command");
+    requireParam(params.name, "name");
+    requireParam(params.to, "to");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -621,6 +771,8 @@ const actions = {
   },
 
   executeAdd(params) {
+    requireParam(params.command, "command");
+    requireParam(params.line, "line");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -632,6 +784,8 @@ const actions = {
   },
 
   executeRemove(params) {
+    requireParam(params.command, "command");
+    requireParam(params.index, "index");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -643,6 +797,9 @@ const actions = {
   },
 
   executeSet(params) {
+    requireParam(params.command, "command");
+    requireParam(params.index, "index");
+    requireParam(params.line, "line");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const profileName = triString(params.profile) || "main";
@@ -654,6 +811,8 @@ const actions = {
   },
 
   packageSet(params) {
+    requireParam(params.field, "field");
+    requireParam(params.value, "value");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     const value = triString(params.json) === "true" || params.json === true
@@ -665,6 +824,7 @@ const actions = {
   },
 
   packageRemove(params) {
+    requireParam(params.field, "field");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeMetadataField(aux4, params.field);
@@ -673,6 +833,7 @@ const actions = {
   },
 
   tagAdd(params) {
+    requireParam(params.tag, "tag");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addTag(aux4, params.tag);
@@ -681,6 +842,7 @@ const actions = {
   },
 
   tagRemove(params) {
+    requireParam(params.tag, "tag");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeTag(aux4, params.tag);
@@ -689,6 +851,7 @@ const actions = {
   },
 
   dependencyAdd(params) {
+    requireParam(params.dependency, "dependency");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     addDependency(aux4, params.dependency);
@@ -697,6 +860,7 @@ const actions = {
   },
 
   dependencyRemove(params) {
+    requireParam(params.dependency, "dependency");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeDependency(aux4, params.dependency);
@@ -705,14 +869,16 @@ const actions = {
   },
 
   systemAdd(params) {
+    const entries = requireEntries(params.entries, "entries");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
-    addSystemGroup(aux4, toLines(params.entries), triString(params.index));
+    addSystemGroup(aux4, entries, triString(params.index));
     save(filePath, aux4, params);
     console.log("System dependency group added");
   },
 
   systemRemove(params) {
+    requireParam(params.index, "index");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     removeSystemGroup(aux4, params.index);
@@ -721,6 +887,7 @@ const actions = {
   },
 
   cloudSet(params) {
+    requireParam(params.value, "value");
     const filePath = withFile(params);
     const aux4 = loadAux4(filePath);
     setMetadataField(aux4, "type", "cloud");
@@ -736,6 +903,99 @@ const actions = {
     if (aux4.type === "cloud") removeMetadataField(aux4, "type");
     save(filePath, aux4, params);
     console.log("Cloud configuration removed");
+  },
+
+  licenseSet(params) {
+    requireParam(params.name, "name");
+    requireParam(params.owner, "owner");
+    const filePath = withFile(params);
+    const aux4 = loadAux4(filePath);
+
+    const project = triString(aux4.name);
+    if (project === undefined) {
+      throw new Error(`'${filePath}' has no 'name' field; cannot determine --project for the license`);
+    }
+
+    const dir = path.dirname(path.resolve(filePath));
+    const year = triString(params.year) || String(new Date().getFullYear());
+    const licensePath = path.join(dir, "LICENSE");
+    const hadLicense = fs.existsSync(licensePath);
+    const previousContent = hadLicense ? fs.readFileSync(licensePath, "utf-8") : null;
+
+    execFileSync(
+      "aux4",
+      ["aux4", "license", "use", "--name", params.name, "--project", project, "--owner", params.owner, "--year", year],
+      { cwd: dir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+
+    let spdxId;
+    try {
+      spdxId = resolveSpdxId(params.name);
+    } catch (e) {
+      restoreLicenseFile(licensePath, hadLicense, previousContent);
+      throw new Error(`Failed to resolve the SPDX identifier for license '${params.name}': ${e.message}`);
+    }
+
+    try {
+      setMetadataField(aux4, "license", spdxId);
+      save(filePath, aux4, params);
+    } catch (e) {
+      restoreLicenseFile(licensePath, hadLicense, previousContent);
+      throw e;
+    }
+
+    console.log(`License '${spdxId}' set. LICENSE written to '${licensePath}'`);
+  },
+
+  licenseList(params) {
+    const args = ["aux4", "license", "list"];
+    const name = triString(params.name);
+    if (name !== undefined) args.push("--name", name);
+    const output = execFileSync("aux4", args, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+    process.stdout.write(output);
+  },
+
+  build(params) {
+    const filePath = withFile(params);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File '${filePath}' not found`);
+    }
+    const dir = path.dirname(path.resolve(filePath));
+    const out = triString(params.out) || ".";
+
+    // 'aux4 aux4 pkger build' requires a README.md next to the .aux4 file and
+    // fails (with a doubled error, see the execFileSync calls below) if it's
+    // missing. Check for it up front so the failure is a single clear message.
+    if (!fs.existsSync(path.join(dir, "README.md"))) {
+      throw new Error("README.md is required to build a package");
+    }
+
+    const issues = runLint(dir);
+    const errors = issues.filter(issue => issue.severity === "error");
+    if (errors.length > 0) {
+      console.error(`aux4/lint rejected '${dir}':`);
+      console.error(formatIssues(errors));
+      throw new Error(`Lint validation failed with ${errors.length} error(s). Build aborted.`);
+    }
+
+    const outDir = path.resolve(dir, out);
+    if (outDir === dir) {
+      // Guard against the recursive-zip trap: if the output directory is the
+      // package directory itself, an old zip left over from a previous build
+      // would get swept into the new archive, growing it on every build.
+      for (const entry of fs.readdirSync(dir)) {
+        if (entry.endsWith(".zip")) {
+          fs.unlinkSync(path.join(dir, entry));
+        }
+      }
+    }
+
+    const output = execFileSync("aux4", ["aux4", "pkger", "build", ".", "--out", out], {
+      cwd: dir,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    process.stdout.write(output);
   }
 };
 
