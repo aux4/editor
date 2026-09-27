@@ -5,6 +5,24 @@
 Pushing to the `dev` branch publishes to the dev hub; pushing to `main` publishes to the prod hub
 (hub.aux4.io). Both are handled by `.github/workflows/publish.yml` via `aux4/action@v1`.
 
+## Latest
+
+### `init` scaffolds a README.md for a package; `build` fails fast and cleanly when one is missing
+
+- `editor init --scope <scope>` and/or `--name <name>` now scaffolds a minimal `README.md` next to
+  the `.aux4` file if one doesn't already exist — `aux4 aux4 pkger build` requires a `README.md`
+  to build a package, so `init` followed by `editor build` now works without an extra manual step.
+  The title is `<scope>/<name>` (or whichever is present); `--description`, if passed, becomes the
+  opening paragraph. An existing `README.md` is never overwritten.
+- `editor build` now checks for `README.md` before linting and aborts with a single clear error —
+  `README.md is required to build a package` — instead of forwarding `aux4 aux4 pkger build`'s own
+  error, which used to print twice (once as the child process's own stderr, once again inside the
+  wrapping error message).
+- Fixed the doubled error output in general: every external `aux4` command this package shells out
+  to (`aux4 lint run`, `aux4 aux4 pkger build`, `aux4 license use`/`info`/`list`) now has its
+  stderr captured instead of also being forwarded live to this process's stderr, so a failing
+  child command's message is printed exactly once.
+
 ## 0.2.0
 
 ### Breaking: command root moved from `aux4 aux4 editor` to `aux4 editor`

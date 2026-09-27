@@ -3,7 +3,7 @@
 ## init
 
 ```afterAll
-rm -f test-editor.aux4 test-editor-bare.aux4
+rm -f test-editor.aux4 test-editor-bare.aux4 test-editor2.aux4 README.md
 ```
 
 ### should create a new .aux4 file with an empty main profile
@@ -12,8 +12,20 @@ rm -f test-editor.aux4 test-editor-bare.aux4
 aux4 editor init --file test-editor.aux4 --scope aux4 --name greet --description "Say hello"
 ```
 
-```expect
+```expect:partial
 Created 'test-editor.aux4'
+```
+
+### should scaffold a README.md next to the .aux4 file for a package, with a title and the given description
+
+```execute
+cat README.md
+```
+
+```expect
+# aux4/greet
+
+Say hello
 ```
 
 ### should fail when the file already exists
@@ -26,10 +38,24 @@ aux4 editor init --file test-editor.aux4 --scope aux4 --name greet
 File 'test-editor.aux4' already exists
 ```
 
-### a bare init with no flags writes only profiles, no invented version, and passes lint
+### should never overwrite an existing README.md on a later init
 
 ```execute
-aux4 editor init --file test-editor-bare.aux4 >/dev/null && aux4 editor show --file test-editor-bare.aux4
+echo "# my own docs" > README.md && aux4 editor init --file test-editor2.aux4 --scope aux4 --name greet2 >/dev/null; cat README.md
+```
+
+```expect
+# my own docs
+```
+
+```execute
+rm -f test-editor2.aux4
+```
+
+### a bare init with no flags writes only profiles, no invented version, and passes lint, and does not scaffold a README.md
+
+```execute
+rm -f README.md && aux4 editor init --file test-editor-bare.aux4 >/dev/null && aux4 editor show --file test-editor-bare.aux4
 ```
 
 ```expect:json
@@ -41,6 +67,14 @@ aux4 editor init --file test-editor-bare.aux4 >/dev/null && aux4 editor show --f
     }
   ]
 }
+```
+
+```execute
+ls README.md
+```
+
+```error:partial
+No such file or directory
 ```
 
 ## show

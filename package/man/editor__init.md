@@ -13,6 +13,12 @@ passed, or (for `version`) implied:
 - If `--scope` and/or `--name` is passed (this is a package) and `--version` is not, `version`
   defaults to `0.1.0`, since `aux4/lint` requires `version` once a package identity is present.
 
+When `--scope` and/or `--name` is passed, `init` also scaffolds a minimal `README.md` next to the
+`.aux4` file if one doesn't already exist — `aux4 aux4 pkger build` requires a `README.md` to build
+a package, so this makes `init` followed by `editor build` work without an extra manual step. The
+title is `<scope>/<name>` (or whichever of the two is present), and `--description`, if given, is
+included as the opening paragraph. An existing `README.md` is never overwritten or touched.
+
 #### Usage
 
 ```bash
@@ -34,6 +40,7 @@ aux4 editor init --scope aux4 --name greet --version 0.1.0 --description "Say he
 
 ```text
 Created '.aux4'
+Created '/path/to/README.md'
 ```
 
 A bare local file (no package metadata):

@@ -3,6 +3,11 @@
 Lints the package directory derived from `--file` (`dirname(--file)`) and, if lint passes, builds
 it into a distributable zip by running `aux4 aux4 pkger build --out <out>` in that directory.
 
+- Before linting, `build` checks that a `README.md` exists next to the `.aux4` file — `aux4 aux4
+  pkger build` requires one and fails otherwise. If it's missing, `build` aborts immediately with a
+  single clear error (`README.md is required to build a package`) instead of forwarding pkger's own
+  error. `aux4 editor init --scope <scope> --name <name>` scaffolds a `README.md` automatically, so
+  this normally only comes up when a `README.md` was removed after `init`.
 - If any lint issue has severity `error`, the errors are printed, the command exits non-zero, and
   no build is attempted.
 - `--out` defaults to `.`, matching `aux4 aux4 pkger build`'s own default — i.e. the zip is written

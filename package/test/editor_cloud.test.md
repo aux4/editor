@@ -86,14 +86,60 @@ aux4 editor cloud set --file test-editor.aux4; aux4 editor show --file test-edit
 }
 ```
 
-### should reject an invalid cloud deployment value
+### should reject the change when it would leave the file failing lint validation
+
+`cloud set` runs the same full-file lint gate as every other write. Here the
+target file already carries an invalid 'version' (caught by aux4/lint's
+core 'metadata-version' rule), so the write must be rejected and the file
+left untouched — regardless of whether the given cloud value itself is
+recognized by the installed aux4/lint version.
+
+```file:test-editor-invalid.aux4
+{
+  "scope": "aux4",
+  "name": "greet",
+  "version": "not-a-semver",
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        { "name": "hello", "execute": ["log:hi"], "help": { "text": "Say hello" } }
+      ]
+    }
+  ]
+}
+```
 
 ```execute
-aux4 editor cloud set --file test-editor.aux4 --value '{"deployment":"nope"}'
+aux4 editor cloud set --file test-editor-invalid.aux4 --value '{"deployment":"any"}'; aux4 editor show --file test-editor-invalid.aux4
 ```
 
 ```error:partial
-ERROR  [metadata-cloud]
+ERROR  [metadata-version]
+```
+
+```expect:json
+{
+  "scope": "aux4",
+  "name": "greet",
+  "version": "not-a-semver",
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "log:hi"
+          ],
+          "help": {
+            "text": "Say hello"
+          }
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ## remove

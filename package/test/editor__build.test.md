@@ -65,6 +65,46 @@ aux4 editor build --file test-build/.aux4 >/dev/null && aux4 editor build --file
 1
 ```
 
+## missing README.md
+
+```file:test-build-noreadme/.aux4
+{
+  "scope": "aux4",
+  "name": "buildtest",
+  "version": "0.1.0",
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        { "name": "hello", "execute": ["log:hi"], "help": { "text": "Say hello" } }
+      ]
+    }
+  ]
+}
+```
+
+```afterAll
+rm -rf test-build-noreadme
+```
+
+### should abort with a single clear error when README.md is missing
+
+```execute
+aux4 editor build --file test-build-noreadme/.aux4
+```
+
+```error
+README.md is required to build a package
+```
+
+```execute
+ls test-build-noreadme/*.zip
+```
+
+```error:partial
+No such file or directory
+```
+
 ## lint failure
 
 ```file:test-build-bad/.aux4
@@ -79,6 +119,10 @@ aux4 editor build --file test-build/.aux4 >/dev/null && aux4 editor build --file
     }
   ]
 }
+```
+
+```file:test-build-bad/README.md
+# buildtest
 ```
 
 ```afterAll

@@ -31,6 +31,21 @@ once a package identity is present.
 aux4 editor init
 ```
 
+When `--scope` and/or `--name` is passed, `init` also scaffolds a minimal `README.md` next to the
+`.aux4` file if one doesn't already exist — `aux4 aux4 pkger build` requires a `README.md`, so
+`init` followed by `editor build` works without an extra manual step. The title is
+`<scope>/<name>` (or whichever of the two is present), and `--description`, if given, becomes the
+opening paragraph. An existing `README.md` is never overwritten.
+
+```bash
+aux4 editor init --scope aux4 --name greet --description "Say hello"
+```
+
+```text
+Created '.aux4'
+Created '/path/to/README.md'
+```
+
 ## The lint gate
 
 Every mutating subcommand:
@@ -215,6 +230,11 @@ aux4 editor build --out dist
 - `--file` defaults to `.aux4`; the package directory is `dirname(--file)`.
 - `--out` defaults to `.` (matching `aux4 aux4 pkger build`'s own default), i.e. the package
   directory itself.
+- `aux4 aux4 pkger build` requires a `README.md` in the package directory. `build` checks for it
+  before linting and aborts with a single clear error — `README.md is required to build a
+  package` — instead of forwarding pkger's own error twice. `aux4 editor init --scope <scope>
+  --name <name>` scaffolds one automatically, so this normally only matters if it was removed
+  afterwards.
 - If any lint issue has severity `error`, the build aborts with a non-zero exit code and no zip is
   produced.
 - When the output directory is the package directory itself (the default), any pre-existing

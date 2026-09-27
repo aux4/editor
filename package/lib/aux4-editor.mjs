@@ -67,7 +67,7 @@ function runLint(tmpDir) {
     output = execFileSync(
       "aux4",
       ["lint", "run", "--dir", tmpDir, "--format", "json", "--strict", "false", "--resolve", "false"],
-      { encoding: "utf-8" }
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
   } catch (err) {
     output = err.stdout;
@@ -481,7 +481,8 @@ const SPDX_ID_FALLBACK = {
 
 function resolveSpdxId(name) {
   const output = execFileSync("aux4", ["aux4", "license", "info", "--name", name, "--json", "true"], {
-    encoding: "utf-8"
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "pipe"]
   });
   const info = JSON.parse(output);
   return info.spdxId || SPDX_ID_FALLBACK[name] || name;
@@ -572,7 +573,28 @@ const actions = {
     ];
 
     save(filePath, aux4, params);
+
+    // A package (identified by 'scope' and/or 'name') must ship a README.md
+    // for 'aux4 aux4 pkger build' to succeed. Scaffold a minimal one next to
+    // the .aux4 file so 'init' -> 'build' works out of the box, but never
+    // touch an existing README.md.
+    let readmeCreated;
+    if (scope !== undefined || name !== undefined) {
+      const dir = path.dirname(path.resolve(filePath));
+      const readmePath = path.join(dir, "README.md");
+      if (!fs.existsSync(readmePath)) {
+        const title = scope !== undefined && name !== undefined ? `${scope}/${name}` : name || scope;
+        const description = triString(params.description);
+        const content = description !== undefined ? `# ${title}\n\n${description}\n` : `# ${title}\n`;
+        fs.writeFileSync(readmePath, content, "utf-8");
+        readmeCreated = readmePath;
+      }
+    }
+
     console.log(`Created '${filePath}'`);
+    if (readmeCreated !== undefined) {
+      console.log(`Created '${readmeCreated}'`);
+    }
   },
 
   show(params) {
@@ -887,7 +909,7 @@ const actions = {
     execFileSync(
       "aux4",
       ["aux4", "license", "use", "--name", params.name, "--project", project, "--owner", params.owner, "--year", year],
-      { cwd: dir, encoding: "utf-8" }
+      { cwd: dir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
 
     let spdxId;
@@ -913,7 +935,7 @@ const actions = {
     const args = ["aux4", "license", "list"];
     const name = triString(params.name);
     if (name !== undefined) args.push("--name", name);
-    const output = execFileSync("aux4", args, { encoding: "utf-8" });
+    const output = execFileSync("aux4", args, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
     process.stdout.write(output);
   },
 
@@ -924,6 +946,13 @@ const actions = {
     }
     const dir = path.dirname(path.resolve(filePath));
     const out = triString(params.out) || ".";
+
+    // 'aux4 aux4 pkger build' requires a README.md next to the .aux4 file and
+    // fails (with a doubled error, see the execFileSync calls below) if it's
+    // missing. Check for it up front so the failure is a single clear message.
+    if (!fs.existsSync(path.join(dir, "README.md"))) {
+      throw new Error("README.md is required to build a package");
+    }
 
     const issues = runLint(dir);
     const errors = issues.filter(issue => issue.severity === "error");
@@ -945,7 +974,11 @@ const actions = {
       }
     }
 
-    const output = execFileSync("aux4", ["aux4", "pkger", "build", ".", "--out", out], { cwd: dir, encoding: "utf-8" });
+    const output = execFileSync("aux4", ["aux4", "pkger", "build", ".", "--out", out], {
+      cwd: dir,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
     process.stdout.write(output);
   }
 };
